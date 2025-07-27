@@ -46,6 +46,16 @@
 
       },
 
+        "API_KEY": {
+
+        "description": "Get this value from Sand Message - @ismjustastone",
+
+        "value": "",
+
+        "required": true
+
+      },
+
       "BOT_TOKEN": {
 
         "description": "A Bot's token from Botfather",
