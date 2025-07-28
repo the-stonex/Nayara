@@ -13,7 +13,7 @@ from AviaxMusic.utils.database import (
     is_nonadmin_chat,
     is_skipmode,
 )
-from config import SUPPORT_CHAT, adminlist, confirmer  # ✅ FIXED
+from config import SUPPORT_CHAT, adminlist, confirmer
 from strings import get_string
 
 from ..formatters import int_to_alpha
@@ -158,3 +158,19 @@ def ActualAdminCB(mystic):
         is_non_admin = await is_nonadmin_chat(CallbackQuery.message.chat.id)
         if not is_non_admin:
             try:
+                a = (await app.get_chat_member(CallbackQuery.message.chat.id, CallbackQuery.from_user.id)).privileges
+            except:
+                return await CallbackQuery.answer(_["general_4"], show_alert=True)
+
+            if not a.can_manage_video_chats:
+                if CallbackQuery.from_user.id not in SUDOERS:
+                    token = await int_to_alpha(CallbackQuery.from_user.id)
+                    _check = await get_authuser_names(CallbackQuery.from_user.id)
+                    if token not in _check:
+                        try:
+                            return await CallbackQuery.answer(_["general_4"], show_alert=True)
+                        except:
+                            return
+        return await mystic(client, CallbackQuery, _)
+
+    return wrapper
