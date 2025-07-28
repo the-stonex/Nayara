@@ -36,6 +36,7 @@ GIT_TOKEN = getenv("GIT_TOKEN", None)
 # ✅ Correct Support Links
 SUPPORT_CHANNEL = getenv("SUPPORT_CHANNEL", "https://t.me/+YTsbDmCAJxVkMTc1")
 SUPPORT_CHAT = getenv("SUPPORT_CHAT", "https://t.me/+uzSTnYDHsVo2NzJl")
+SUPPORT_GROUP = SUPPORT_CHAT  # ✅ Fix for old code using SUPPORT_GROUP
 
 # Privacy Policy
 PRIVACY_LINK = getenv("PRIVACY_LINK", "https://telegra.ph/Privacy-Policy-for-AviaxMusic-08-14")
@@ -90,7 +91,7 @@ def time_to_seconds(time):
 
 DURATION_LIMIT = int(time_to_seconds(f"{DURATION_LIMIT_MIN}:00"))
 
-# ✅ URL Validation (Fixed)
+# ✅ URL Validation
 if SUPPORT_CHANNEL and not re.match("(?:http|https)://", SUPPORT_CHANNEL):
     raise SystemExit("[ERROR] - Your SUPPORT_CHANNEL URL is wrong. It must start with https://")
 
