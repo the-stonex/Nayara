@@ -5,56 +5,52 @@ from pyrogram import filters
 
 load_dotenv()
 
-# Get this value from my.telegram.org/apps
+# Telegram API credentials
 API_ID = int(getenv("API_ID"))
 API_HASH = getenv("API_HASH")
-
-# Get your token from @BotFather on Telegram
 BOT_TOKEN = getenv("BOT_TOKEN")
 
-# Get your MongoDB URI from cloud.mongodb.com
+# Database
 MONGO_DB_URI = getenv("MONGO_DB_URI", None)
 
 # Duration limit in minutes
 DURATION_LIMIT_MIN = int(getenv("DURATION_LIMIT", 999999))
 
-# Group ID for logging bot activities
+# IDs
 LOG_GROUP_ID = int(getenv("LOG_GROUP_ID", None))
-
-# Owner ID (from @MissRose_Bot using /id)
 OWNER_ID = int(getenv("OWNER_ID", None))
 
-# Heroku deployment details
+# Heroku
 HEROKU_APP_NAME = getenv("HEROKU_APP_NAME")
 HEROKU_API_KEY = getenv("HEROKU_API_KEY")
 
-# API details for YouTube song fetching
+# External API for music
 API_URL = getenv("API_URL", 'https://api.thequickearn.xyz')
 API_KEY = getenv("API_KEY", None)
 
-# Upstream repo details
+# Repo details
 UPSTREAM_REPO = getenv("UPSTREAM_REPO", "https://github.com/the-stonex/Nayara")
 UPSTREAM_BRANCH = getenv("UPSTREAM_BRANCH", "master")
-GIT_TOKEN = getenv("GIT_TOKEN", None)  # Required for private repo
+GIT_TOKEN = getenv("GIT_TOKEN", None)
 
-# Support links
+# ✅ Fixed Support Links
 SUPPORT_CHANNEL = getenv("SUPPORT_CHANNEL", "https://t.me/+YTsbDmCAJxVkMTc1")
-SUPPORT_CHAT = getenv("SUPPORT_GROUP", "https://t.me/+uzSTnYDHsVo2NzJl")
+SUPPORT_CHAT = getenv("SUPPORT_CHAT", "https://t.me/+uzSTnYDHsVo2NzJl")  # ✅ Corrected Name
 
-# Privacy Policy link
+# Privacy Policy
 PRIVACY_LINK = getenv("PRIVACY_LINK", "https://telegra.ph/Privacy-Policy-for-AviaxMusic-08-14")
 
-# Auto-leaving assistant setting
+# Auto-leaving setting
 AUTO_LEAVING_ASSISTANT = bool(getenv("AUTO_LEAVING_ASSISTANT", True))
 
-# Spotify credentials
+# Spotify
 SPOTIFY_CLIENT_ID = getenv("SPOTIFY_CLIENT_ID", None)
 SPOTIFY_CLIENT_SECRET = getenv("SPOTIFY_CLIENT_SECRET", None)
 
-# Playlist fetching limit
+# Playlist limit
 PLAYLIST_FETCH_LIMIT = int(getenv("PLAYLIST_FETCH_LIMIT", 25))
 
-# Telegram file size limits (in bytes)
+# File size limits
 TG_AUDIO_FILESIZE_LIMIT = int(getenv("TG_AUDIO_FILESIZE_LIMIT", 104857600))
 TG_VIDEO_FILESIZE_LIMIT = int(getenv("TG_VIDEO_FILESIZE_LIMIT", 2145386496))
 
@@ -65,7 +61,7 @@ STRING3 = getenv("STRING_SESSION3", None)
 STRING4 = getenv("STRING_SESSION4", None)
 STRING5 = getenv("STRING_SESSION5", None)
 
-# Filters and dictionaries
+# Filters and dicts
 BANNED_USERS = filters.user()
 adminlist = {}
 lyrical = {}
@@ -87,16 +83,16 @@ SPOTIFY_ARTIST_IMG_URL = "https://te.legra.ph/file/37d163a2f75e0d3b403d6.jpg"
 SPOTIFY_ALBUM_IMG_URL = "https://te.legra.ph/file/b35fd1dfca73b950b1b05.jpg"
 SPOTIFY_PLAYLIST_IMG_URL = "https://te.legra.ph/file/95b3ca7993bbfaf993dcb.jpg"
 
-# Function to convert time to seconds
+# Time to seconds function
 def time_to_seconds(time):
     stringt = str(time)
     return sum(int(x) * 60**i for i, x in enumerate(reversed(stringt.split(":"))))
 
 DURATION_LIMIT = int(time_to_seconds(f"{DURATION_LIMIT_MIN}:00"))
 
-# Validate URLs
+# ✅ URL Validation
 if SUPPORT_CHANNEL and not re.match("(?:http|https)://", SUPPORT_CHANNEL):
     raise SystemExit("[ERROR] - Your SUPPORT_CHANNEL URL is wrong. It must start with https://")
 
-if SUPPORT_GROUP and not re.match("(?:http|https)://", SUPPORT_GROUP):
-    raise SystemExit("[ERROR] - Your SUPPORT_GROUP URL is wrong. It must start with https://")
+if SUPPORT_CHAT and not re.match("(?:http|https)://", SUPPORT_CHAT):
+    raise SystemExit("[ERROR] - Your SUPPORT_CHAT URL is wrong. It must start with https://")
