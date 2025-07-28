@@ -33,9 +33,9 @@ UPSTREAM_REPO = getenv("UPSTREAM_REPO", "https://github.com/the-stonex/Nayara")
 UPSTREAM_BRANCH = getenv("UPSTREAM_BRANCH", "master")
 GIT_TOKEN = getenv("GIT_TOKEN", None)
 
-# ✅ Fixed Support Links
+# ✅ Correct Support Links
 SUPPORT_CHANNEL = getenv("SUPPORT_CHANNEL", "https://t.me/+YTsbDmCAJxVkMTc1")
-SUPPORT_CHAT = getenv("SUPPORT_CHAT", "https://t.me/+uzSTnYDHsVo2NzJl")  # ✅ Corrected Name
+SUPPORT_CHAT = getenv("SUPPORT_CHAT", "https://t.me/+uzSTnYDHsVo2NzJl")
 
 # Privacy Policy
 PRIVACY_LINK = getenv("PRIVACY_LINK", "https://telegra.ph/Privacy-Policy-for-AviaxMusic-08-14")
@@ -83,14 +83,14 @@ SPOTIFY_ARTIST_IMG_URL = "https://te.legra.ph/file/37d163a2f75e0d3b403d6.jpg"
 SPOTIFY_ALBUM_IMG_URL = "https://te.legra.ph/file/b35fd1dfca73b950b1b05.jpg"
 SPOTIFY_PLAYLIST_IMG_URL = "https://te.legra.ph/file/95b3ca7993bbfaf993dcb.jpg"
 
-# Time to seconds function
+# Convert time to seconds
 def time_to_seconds(time):
     stringt = str(time)
     return sum(int(x) * 60**i for i, x in enumerate(reversed(stringt.split(":"))))
 
 DURATION_LIMIT = int(time_to_seconds(f"{DURATION_LIMIT_MIN}:00"))
 
-# ✅ URL Validation
+# ✅ URL Validation (Fixed)
 if SUPPORT_CHANNEL and not re.match("(?:http|https)://", SUPPORT_CHANNEL):
     raise SystemExit("[ERROR] - Your SUPPORT_CHANNEL URL is wrong. It must start with https://")
 
