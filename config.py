@@ -39,7 +39,7 @@ GIT_TOKEN = getenv("GIT_TOKEN", None)  # Required for private repo
 
 # Support links
 SUPPORT_CHANNEL = getenv("SUPPORT_CHANNEL", "https://t.me/+YTsbDmCAJxVkMTc1")
-SUPPORT_GROUP = getenv("SUPPORT_GROUP", "https://t.me/+uzSTnYDHsVo2NzJl")
+SUPPORT_CHAT = getenv("SUPPORT_GROUP", "https://t.me/+uzSTnYDHsVo2NzJl")
 
 # Privacy Policy link
 PRIVACY_LINK = getenv("PRIVACY_LINK", "https://telegra.ph/Privacy-Policy-for-AviaxMusic-08-14")
