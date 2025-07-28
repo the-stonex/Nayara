@@ -1,19 +1,22 @@
 from typing import Union
-from pyrogram import Client, filters, types
-from pyrogram.types import InlineKeyboardMarkup, Message
+
+from pyrogram import filters, types
+from pyrogram.types import InlineKeyboardMarkup, Message, InlineKeyboardButton
 
 from AviaxMusic import app
 from AviaxMusic.utils import help_pannel
 from AviaxMusic.utils.database import get_lang
 from AviaxMusic.utils.decorators.language import LanguageStart, languageCB
 from AviaxMusic.utils.inline.help import help_back_markup, private_help_panel
-from config import BANNED_USERS, START_IMG_URL, SUPPORT_CHAT  # ✅ SUPPORT_GROUP → SUPPORT_CHAT (fix)
+from config import BANNED_USERS, START_IMG_URL, SUPPORT_CHAT
 from strings import get_string, helpers
+from AviaxMusic.misc import SUDOERS
 
-# ✅ PRIVATE HELP COMMAND OR CALLBACK
+
+# ✅ Private Help Command
 @app.on_message(filters.command("help") & filters.private & ~BANNED_USERS)
 @app.on_callback_query(filters.regex("settings_back_helper") & ~BANNED_USERS)
-async def helper_private(client: Client, update: Union[types.Message, types.CallbackQuery]):
+async def helper_private(client: app, update: Union[types.Message, types.CallbackQuery]):
     is_callback = isinstance(update, types.CallbackQuery)
     if is_callback:
         try:
@@ -25,8 +28,7 @@ async def helper_private(client: Client, update: Union[types.Message, types.Call
         _ = get_string(language)
         keyboard = help_pannel(_, True)
         await update.edit_message_text(
-            _["help_1"].format(SUPPORT_CHAT),  # ✅ SUPPORT_GROUP → SUPPORT_CHAT
-            reply_markup=keyboard
+            _["help_1"].format(SUPPORT_CHAT), reply_markup=keyboard
         )
     else:
         try:
@@ -38,36 +40,45 @@ async def helper_private(client: Client, update: Union[types.Message, types.Call
         keyboard = help_pannel(_)
         await update.reply_photo(
             photo=START_IMG_URL,
-            caption=_["help_1"].format(SUPPORT_CHAT),  # ✅ SUPPORT_GROUP → SUPPORT_CHAT
-            reply_markup=keyboard
+            caption=_["help_1"].format(SUPPORT_CHAT),
+            reply_markup=keyboard,
         )
 
-# ✅ GROUP HELP COMMAND
+
+# ✅ Group Help Command
 @app.on_message(filters.command("help") & filters.group & ~BANNED_USERS)
 @LanguageStart
-async def help_com_group(client: Client, message: Message, _):
+async def help_com_group(client, message: Message, _):
     keyboard = private_help_panel(_)
-    await message.reply_text(
-        _["help_2"],
-        reply_markup=InlineKeyboardMarkup(keyboard)
-    )
+    await message.reply_text(_["help_2"], reply_markup=InlineKeyboardMarkup(keyboard))
 
-# ✅ CALLBACK HANDLER FOR HELP BUTTONS
+
+# ✅ Help Callback Buttons
 @app.on_callback_query(filters.regex("help_callback") & ~BANNED_USERS)
 @languageCB
-async def helper_cb(client: Client, CallbackQuery, _):
-    try:
-        cb = CallbackQuery.data.strip().split(None, 1)[1]
-    except IndexError:
-        cb = None
-
+async def helper_cb(client, CallbackQuery, _):
+    callback_data = CallbackQuery.data.strip()
+    cb = callback_data.split(None, 1)[1]
     keyboard = help_back_markup(_)
-    if cb == "hb16":
-        text = helpers.HELP_16.format(app.name)
-    else:
-        text = getattr(helpers, f"HELP_{cb[2:]}", "No help available.")
 
+    if cb == "hb6" and CallbackQuery.from_user.id not in SUDOERS:
+        return await CallbackQuery.answer("You are not a sudo user.", show_alert=True)
+
+    help_text = getattr(helpers, f"HELP_{cb[2:]}", None)
+    if help_text:
+        await CallbackQuery.edit_message_text(help_text, reply_markup=keyboard)
+    else:
+        await CallbackQuery.answer("Invalid Option!", show_alert=True)
+
+
+# ✅ Extra Callback Buttons for Advanced Panel
+@app.on_callback_query(filters.regex("extra_help") & ~BANNED_USERS)
+async def extra_help(client, CallbackQuery):
     await CallbackQuery.edit_message_text(
-        text,
-        reply_markup=keyboard
+        "Advanced Help Menu:\n\nUse buttons below to explore features.",
+        reply_markup=InlineKeyboardMarkup(
+            [
+                [InlineKeyboardButton("↺ Back", callback_data="settings_back_helper")],
+            ]
+        ),
     )
