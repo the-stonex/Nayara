@@ -67,7 +67,7 @@ async def start_pm(client, message: Message, _):
             await sudoers_list(client=client, message=message, _=_)
             if await is_on_off(2):
                 return await app.send_message(
-                    chat_id=config.LOGGER_ID,
+                    chat_id=config.LOG_GROUP_ID,
                     text=f"{message.from_user.mention} started the bot to check <b>Sudo List</b>.\n\n<b>User ID:</b> <code>{message.from_user.id}</code>\n<b>Username:</b> @{message.from_user.username}",
                 )
 
@@ -106,7 +106,7 @@ async def start_pm(client, message: Message, _):
             )
             if await is_on_off(2):
                 return await app.send_message(
-                    chat_id=config.LOGGER_ID,
+                    chat_id=config.LOG_GROUP_ID,
                     text=f"{message.from_user.mention} started the bot to check <b>Track Information</b>.\n\n<b>User ID:</b> <code>{message.from_user.id}</code>\n<b>Username:</b> @{message.from_user.username}",
                 )
     else:
@@ -132,7 +132,7 @@ async def start_pm(client, message: Message, _):
         )
         if await is_on_off(2):
             return await app.send_message(
-                chat_id=config.LOGGER_ID,
+                chat_id=config.LOG_GROUP_ID,
                 text=f"{message.from_user.mention} started the bot.\n\n<b>User ID:</b> <code>{message.from_user.id}</code>\n<b>Username:</b> @{message.from_user.username}",
             )
 
