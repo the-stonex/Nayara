@@ -71,7 +71,7 @@ autoclean = []
 confirmer = {}
 
 # Image URLs
-START_VIDEO_URL = getenv("START_VIDEO_URL", "https://files.catbox.moe/y030tk.mp4")
+START_IMG_URL = getenv("START_IMG_URL", "https://files.catbox.moe/y030tk.mp4")
 PING_IMG_URL = getenv("PING_IMG_URL", "https://graph.org//file/389a372e8ae039320ca6c.png")
 PLAYLIST_IMG_URL = "https://graph.org//file/3dfcffd0c218ead96b102.png"
 STATS_IMG_URL = "https://files.catbox.moe/4pnek9.jpg"
