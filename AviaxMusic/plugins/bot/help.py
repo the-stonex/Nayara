@@ -3,16 +3,16 @@ from typing import Union
 from pyrogram import filters, types
 from pyrogram.types import InlineKeyboardMarkup, Message, InlineKeyboardButton
 
-from AvianMusic import app
-from AvianMusic.utils import help_pannel
-from AvianMusic.utils.database import get_lang
-from AvianMusic.utils.decorators.language import LanguageStart, languageCB
-from AvianMusic.utils.inline.help import help_back_markup, private_help_panel
+from AviaxMusic import app
+from AviaxMusic.utils import help_pannel
+from AviaxMusic.utils.database import get_lang
+from AviaxMusic.utils.decorators.language import LanguageStart, languageCB
+from AviaxMusic.utils.inline.help import help_back_markup, private_help_panel
 from config import BANNED_USERS, START_IMG_URL, SUPPORT_CHAT
 from strings import get_string, helpers
-from AvianMusic.misc import SUDOERS
-from AvianMusic.utils.stuffs.buttons import BUTTONS
-from AvianMusic.utils.stuffs.helper import Helper
+from AviaxMusic.misc import SUDOERS
+from AviaxMusic.utils.stuffs.buttons import BUTTONS
+from AviaxMusic.utils.stuffs.helper import Helper
 
 @app.on_message(filters.command(["help"]) & filters.private & ~BANNED_USERS)
 @app.on_callback_query(filters.regex("settings_back_helper") & ~BANNED_USERS)
