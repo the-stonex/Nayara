@@ -3,20 +3,22 @@ from typing import Union
 from pyrogram import filters, types
 from pyrogram.types import InlineKeyboardMarkup, Message, InlineKeyboardButton
 
-from AviaxMusic import app
-from AviaxMusic.utils import help_pannel
-from AviaxMusic.utils.database import get_lang
-from AviaxMusic.utils.decorators.language import LanguageStart, languageCB
-from AviaxMusic.utils.inline.help import help_back_markup, private_help_panel
+from AvianMusic import app
+from AvianMusic.utils import help_pannel
+from AvianMusic.utils.database import get_lang
+from AvianMusic.utils.decorators.language import LanguageStart, languageCB
+from AvianMusic.utils.inline.help import help_back_markup, private_help_panel
 from config import BANNED_USERS, START_IMG_URL, SUPPORT_CHAT
 from strings import get_string, helpers
-from AviaxMusic.misc import SUDOERS
+from AvianMusic.misc import SUDOERS
+from AvianMusic.utils.stuffs.buttons import BUTTONS
+from AvianMusic.utils.stuffs.helper import Helper
 
-
-# ✅ Private Help Command
-@app.on_message(filters.command("help") & filters.private & ~BANNED_USERS)
+@app.on_message(filters.command(["help"]) & filters.private & ~BANNED_USERS)
 @app.on_callback_query(filters.regex("settings_back_helper") & ~BANNED_USERS)
-async def helper_private(client: app, update: Union[types.Message, types.CallbackQuery]):
+async def helper_private(
+    client: app, update: Union[types.Message, types.CallbackQuery]
+):
     is_callback = isinstance(update, types.CallbackQuery)
     if is_callback:
         try:
@@ -45,40 +47,76 @@ async def helper_private(client: app, update: Union[types.Message, types.Callbac
         )
 
 
-# ✅ Group Help Command
-@app.on_message(filters.command("help") & filters.group & ~BANNED_USERS)
+@app.on_message(filters.command(["help"]) & filters.group & ~BANNED_USERS)
 @LanguageStart
 async def help_com_group(client, message: Message, _):
     keyboard = private_help_panel(_)
     await message.reply_text(_["help_2"], reply_markup=InlineKeyboardMarkup(keyboard))
 
 
-# ✅ Help Callback Buttons
+@app.on_callback_query(filters.regex("abot_cb") & ~BANNED_USERS)
+async def helper_cb(client, CallbackQuery):
+    await CallbackQuery.edit_message_text(Helper.HELP_B, reply_markup=InlineKeyboardMarkup(BUTTONS.ABUTTON))
+
+@app.on_callback_query(filters.regex("ubot_cb") & ~BANNED_USERS)
+async def helper_cb(client, CallbackQuery):
+    await CallbackQuery.edit_message_text(Helper.HELP_B, reply_markup=InlineKeyboardMarkup(BUTTONS.UBUTTON))
+
+@app.on_callback_query(filters.regex("tbot_cb") & ~BANNED_USERS)
+async def helper_cb(client, CallbackQuery):
+    await CallbackQuery.edit_message_text(Helper.HELP_B, reply_markup=InlineKeyboardMarkup(BUTTONS.TBUTTON))
+
 @app.on_callback_query(filters.regex("help_callback") & ~BANNED_USERS)
 @languageCB
 async def helper_cb(client, CallbackQuery, _):
     callback_data = CallbackQuery.data.strip()
     cb = callback_data.split(None, 1)[1]
     keyboard = help_back_markup(_)
+    if cb == "hb6":
+        if CallbackQuery.from_user.id not in SUDOERS:
+            return await CallbackQuery.answer(
+                "ʏᴏᴜ ᴀʀᴇ ɴᴏᴛ ᴀ sᴜᴅᴏ ᴜsᴇʀ", show_alert=True
+            )
+        else:
+            await CallbackQuery.edit_message_text(helpers.HELP_6, reply_markup=keyboard)
+            return await CallbackQuery.answer()
+    try:
+        await CallbackQuery.answer()
+    except:
+        pass
+    if cb == "hb1":
+        await CallbackQuery.edit_message_text(helpers.HELP_1, reply_markup=keyboard)
+    elif cb == "hb2":
+        await CallbackQuery.edit_message_text(helpers.HELP_2, reply_markup=keyboard)
+    elif cb == "hb3":
+        await CallbackQuery.edit_message_text(helpers.HELP_3, reply_markup=keyboard)
+    elif cb == "hb4":
+        await CallbackQuery.edit_message_text(helpers.HELP_4, reply_markup=keyboard)
+    elif cb == "hb5":
+        await CallbackQuery.edit_message_text(helpers.HELP_5, reply_markup=keyboard)
+    elif cb == "hb7":
+        await CallbackQuery.edit_message_text(helpers.HELP_7, reply_markup=keyboard)
+    elif cb == "hb8":
+        await CallbackQuery.edit_message_text(helpers.HELP_8, reply_markup=keyboard)
+    elif cb == "hb9":
+        await CallbackQuery.edit_message_text(helpers.HELP_9, reply_markup=keyboard)
 
-    if cb == "hb6" and CallbackQuery.from_user.id not in SUDOERS:
-        return await CallbackQuery.answer("You are not a sudo user.", show_alert=True)
-
-    help_text = getattr(helpers, f"HELP_{cb[2:]}", None)
-    if help_text:
-        await CallbackQuery.edit_message_text(help_text, reply_markup=keyboard)
+@app.on_callback_query(filters.regex('cplus'))      
+async def mb_plugin_button(client, CallbackQuery):
+    callback_data = CallbackQuery.data.strip()
+    cb = callback_data.split(None, 1)[1]
+    keyboard = InlineKeyboardMarkup([[InlineKeyboardButton("↺ ʙᴧᴄᴋ ↻", callback_data=f"tbot_cb")]])
+    if cb == "Okieeeeee":
+        await CallbackQuery.edit_message_text(f"`something errors`",reply_markup=keyboard,parse_mode=enums.ParseMode.MARKDOWN)
     else:
-        await CallbackQuery.answer("Invalid Option!", show_alert=True)
+        await CallbackQuery.edit_message_text(getattr(Helper, cb), reply_markup=keyboard)
 
-
-# ✅ Extra Callback Buttons for Advanced Panel
-@app.on_callback_query(filters.regex("extra_help") & ~BANNED_USERS)
-async def extra_help(client, CallbackQuery):
-    await CallbackQuery.edit_message_text(
-        "Advanced Help Menu:\n\nUse buttons below to explore features.",
-        reply_markup=InlineKeyboardMarkup(
-            [
-                [InlineKeyboardButton("↺ Back", callback_data="settings_back_helper")],
-            ]
-        ),
-    )
+@app.on_callback_query(filters.regex('dplus'))      
+async def mb_plugin_button(client, CallbackQuery):
+    callback_data = CallbackQuery.data.strip()
+    cb = callback_data.split(None, 1)[1]
+    keyboard = InlineKeyboardMarkup([[InlineKeyboardButton("↺ ʙᴧᴄᴋ ↻", callback_data=f"ubot_cb")]])
+    if cb == "Okieeeeee":
+        await CallbackQuery.edit_message_text(f"`something errors`",reply_markup=keyboard,parse_mode=enums.ParseMode.MARKDOWN)
+    else:
+        await CallbackQuery.edit_message_text(getattr(Helper, cb), reply_markup=keyboard)
