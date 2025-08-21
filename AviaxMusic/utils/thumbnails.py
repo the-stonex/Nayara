@@ -1,90 +1,136 @@
-import os 
-import aiohttp 
-import aiofiles 
-import traceback from PIL 
-import Image, ImageDraw, ImageFilter, ImageFont from youtubesearchpython.future import VideosSearch
+import os
+import re
+import aiohttp
+import aiofiles
+import traceback
+from PIL import Image, ImageDraw, ImageEnhance, ImageFilter, ImageFont
+from youtubesearchpython.future import VideosSearch
 
-def changeImageSize(maxWidth, maxHeight, image): ratio = min(maxWidth / image.size[0], maxHeight / image.size[1]) newSize = (int(image.size[0] * ratio), int(image.size[1] * ratio)) return image.resize(newSize, Image.ANTIALIAS)
+# Resize image maintaining aspect ratio
+def changeImageSize(maxWidth, maxHeight, image):
+    ratio = min(maxWidth / image.size[0], maxHeight / image.size[1])
+    newSize = (int(image.size[0] * ratio), int(image.size[1] * ratio))
+    return image.resize(newSize, Image.ANTIALIAS)
 
-def rounded_rectangle_mask(size, radius): w, h = size mask = Image.new("L", (w, h), 0) draw = ImageDraw.Draw(mask) draw.rounded_rectangle([0, 0, w, h], radius=radius, fill=255) return mask
+# Ensure text fits within max width
+def ensure_text_fits(draw, text, font, max_width):
+    text_width = draw.textlength(text, font=font)
+    if text_width <= max_width:
+        return text
+    while text and draw.textlength(text + "...", font=font) > max_width:
+        text = text[:-1]
+    return text + "..."
 
-def add_shadow(base, box, radius=46, blur=32, opacity=110): x, y, w, h = box shadow = Image.new("RGBA", (w, h), (0, 0, 0, 0)) ImageDraw.Draw(shadow).rounded_rectangle([0, 0, w, h], radius=radius, fill=(0, 0, 0, opacity)) shadow = shadow.filter(ImageFilter.GaussianBlur(blur)) base.alpha_composite(shadow, (x, y + 6))
+# Fit text with font size range
+def fit_text(draw, text, max_width, font_path, start_size, min_size):
+    size = start_size
+    while size >= min_size:
+        font = ImageFont.truetype(font_path, size)
+        if draw.textlength(text, font=font) <= max_width:
+            return font
+        size -= 1
+    return ImageFont.truetype(font_path, min_size)
 
-def draw_controls(draw, base_y, center_x): gap = 120 color = (0, 0, 0) # Shuffle draw.line([(center_x-2gap-20, base_y-8),(center_x-2gap+15, base_y-8)], width=4, fill=color) draw.polygon([(center_x-2gap+15, base_y-14),(center_x-2gap+28, base_y),(center_x-2gap+15, base_y+14)], fill=color) # Previous draw.polygon([(center_x-gap+20,base_y-15),(center_x-gap-30,base_y),(center_x-gap+20,base_y+15)], fill=color) draw.rectangle([center_x-gap+28, base_y-15, center_x-gap+36, base_y+15], fill=color) # Play button r = 30 draw.ellipse([center_x-r, base_y-r, center_x+r, base_y+r], outline=color, width=4) draw.polygon([(center_x-10, base_y-18),(center_x-10, base_y+18),(center_x+18, base_y)], fill=color) # Next draw.polygon([(center_x+gap-20,base_y-15),(center_x+gap+30,base_y),(center_x+gap-20,base_y+15)], fill=color) draw.rectangle([center_x+gap-36, base_y-15, center_x+gap-28, base_y+15], fill=color) # Repeat draw.arc([center_x+gap2-24, base_y-20, center_x+gap2+24, base_y+20], start=210, end=20, width=4, fill=color) draw.polygon([(center_x+gap2+26, base_y-2),(center_x+gap2+10, base_y-10),(center_x+gap2+6, base_y+10)], fill=color)
+async def get_thumb(videoid: str):
+    url = f"https://www.youtube.com/watch?v={videoid}"
+    try:
+        results = VideosSearch(url, limit=1)
+        result = (await results.next())["result"][0]
 
-async def get_thumb(videoid: str): url = f"https://www.youtube.com/watch?v={videoid}" try: results = VideosSearch(url, limit=1) result = (await results.next())["result"][0]
+        title = result.get("title", "Unknown Title")
+        duration = result.get("duration", "00:00")
+        thumbnail = result["thumbnails"][0]["url"].split("?")[0]
+        channel = result.get("channel", {}).get("name", "Unknown Channel")
+        views = result.get("viewCount", {}).get("short", "0 views")
 
-title = result.get("title", "Unknown Title")
-    duration = result.get("duration", "00:00") or "00:00"
-    thumbnail = result["thumbnails"][0]["url"].split("?")[0]
-    views = result.get("viewCount", {}).get("short", "0 views")
+        # download thumbnail
+        async with aiohttp.ClientSession() as session:
+            async with session.get(thumbnail) as resp:
+                if resp.status == 200:
+                    async with aiofiles.open(f"cache/thumb{videoid}.png", "wb") as f:
+                        await f.write(await resp.read())
 
-    os.makedirs("cache", exist_ok=True)
+        base_img = Image.open(f"cache/thumb{videoid}.png").convert("RGBA")
+        bg_img = changeImageSize(1280, 720, base_img).convert("RGBA")
+        blurred_bg = bg_img.filter(ImageFilter.GaussianBlur(25))
 
-    async with aiohttp.ClientSession() as session:
-        async with session.get(thumbnail) as resp:
-            if resp.status == 200:
-                async with aiofiles.open(f"cache/thumb{videoid}.png", "wb") as f:
-                    await f.write(await resp.read())
+        # card box (rounded rectangle)
+        card_width, card_height = 1050, 400
+        card = Image.new("RGBA", (card_width, card_height), (255, 255, 255, 235))
+        mask = Image.new("L", (card_width, card_height), 0)
+        draw_mask = ImageDraw.Draw(mask)
+        draw_mask.rounded_rectangle([0, 0, card_width, card_height], radius=50, fill=255)
+        card_pos = ((1280 - card_width) // 2, (720 - card_height) // 2)
+        blurred_bg.paste(card, card_pos, mask)
 
-    base_img = Image.open(f"cache/thumb{videoid}.png").convert("RGBA")
+        final_bg = blurred_bg.copy()
+        draw = ImageDraw.Draw(final_bg)
 
-    bg = changeImageSize(1280, 720, base_img)
-    bg = bg.filter(ImageFilter.GaussianBlur(25))
-    overlay = Image.new("RGBA", bg.size, (0, 0, 0, 90))
-    bg = Image.alpha_composite(bg, overlay)
+        # fonts
+        font_path_regular = "AviaxMusic/assets/font2.ttf"
+        font_path_bold = "AviaxMusic/assets/font3.ttf"
 
-    card_w, card_h = 980, 420
-    card_x, card_y = (1280 - card_w)//2, (720 - card_h)//2
-    add_shadow(bg, (card_x, card_y, card_w, card_h))
+        # album art with rounded corners
+        thumb_size = 350
+        corner_radius = 40
+        mask_thumb = Image.new("L", (thumb_size, thumb_size), 0)
+        draw_thumb_mask = ImageDraw.Draw(mask_thumb)
+        draw_thumb_mask.rounded_rectangle((0, 0, thumb_size, thumb_size), radius=corner_radius, fill=255)
 
-    card = Image.new("RGBA", (card_w, card_h), (255, 255, 255, 210))
-    mask = rounded_rectangle_mask((card_w, card_h), 46)
-    bg.paste(card, (card_x, card_y), mask)
+        thumb_square = base_img.resize((thumb_size, thumb_size))
+        thumb_square.putalpha(mask_thumb)
 
-    draw = ImageDraw.Draw(bg)
+        thumb_x = card_pos[0] + 40
+        thumb_y = card_pos[1] + (card_height - thumb_size) // 2
+        final_bg.paste(thumb_square, (thumb_x, thumb_y), thumb_square)
 
-    font_path_regular = "AviaxMusic/assets/font2.ttf"
-    font_path_bold = "AviaxMusic/assets/font3.ttf"
-    font_title = ImageFont.truetype(font_path_bold, 44)
-    font_sub = ImageFont.truetype(font_path_regular, 28)
-    font_small = ImageFont.truetype(font_path_regular, 24)
+        # text layout
+        text_x = thumb_x + thumb_size + 40
+        text_y = thumb_y + 30
+        max_text_width = card_width - (text_x - card_pos[0]) - 40
 
-    art_size = 280
-    art = base_img.resize((art_size, art_size))
-    art_mask = rounded_rectangle_mask((art_size, art_size), 30)
-    art_x, art_y = card_x + 32, card_y + 32
-    bg.paste(art, (art_x, art_y), art_mask)
+        font_small = ImageFont.truetype(font_path_regular, 30)
+        font_medium = ImageFont.truetype(font_path_regular, 36)
+        font_title = fit_text(draw, title, max_text_width, font_path_bold, 48, 32)
 
-    text_x = art_x + art_size + 32
-    draw.text((text_x, art_y + 6), title, fill=(0, 0, 0), font=font_title)
-    draw.text((text_x, art_y + 66), f"YouTube | {views}", fill=(70, 70, 70), font=font_sub)
+        # title
+        title_text = ensure_text_fits(draw, title, font_title, max_text_width)
+        draw.text((text_x, text_y), title_text, fill=(0, 0, 0), font=font_title)
 
-    bar_left, bar_right = text_x, card_x + card_w - 32
-    bar_y = art_y + 140
-    pr_ratio = 0.40
-    pr_x = int(bar_left + (bar_right - bar_left) * pr_ratio)
+        # channel + views
+        info_text = f"YouTube | {views}"
+        draw.text((text_x, text_y + 70), info_text, fill=(80, 80, 80), font=font_medium)
 
-    draw.rounded_rectangle([bar_left, bar_y, bar_right, bar_y + 10], radius=5, fill=(190, 190, 190))
-    draw.rounded_rectangle([bar_left, bar_y, pr_x, bar_y + 10], radius=5, fill=(234, 36, 36))
-    draw.ellipse([pr_x - 12, bar_y - 2, pr_x + 12, bar_y + 22], fill=(234, 36, 36))
+        # progress bar
+        bar_y = text_y + 160
+        bar_x1, bar_x2 = text_x, text_x + max_text_width
+        draw.line((bar_x1, bar_y, bar_x2, bar_y), fill=(200, 200, 200), width=8)
 
-    draw.text((bar_left, bar_y + 24), "00:00", fill=(70, 70, 70), font=font_small)
-    dur_w = draw.textlength(duration, font=font_small)
-    draw.text((bar_right - int(dur_w), bar_y + 24), duration, fill=(70, 70, 70), font=font_small)
+        # time indicators
+        draw.text((bar_x1, bar_y + 15), "00:00", fill=(100, 100, 100), font=font_small)
+        draw.text((bar_x2 - 80, bar_y + 15), duration, fill=(100, 100, 100), font=font_small)
 
-    draw_controls(draw, card_y + card_h - 70, card_x + card_w // 2)
+        # controls (shuffle, prev, play, next, repeat)
+        icon_y = bar_y + 90
+        spacing = 120
+        center_x = text_x + max_text_width // 2
 
-    output_path = f"cache/{videoid}_styled.png"
-    bg.save(output_path)
+        # Draw play button circle
+        play_radius = 35
+        draw.ellipse((center_x - play_radius, icon_y - play_radius, center_x + play_radius, icon_y + play_radius), fill=(0, 0, 0))
+        draw.polygon([(center_x - 10, icon_y - 15), (center_x - 10, icon_y + 15), (center_x + 15, icon_y)], fill=(255, 255, 255))
 
-    os.remove(f"cache/thumb{videoid}.png")
-    return output_path
+        output_path = f"cache/{videoid}_styled.png"
+        final_bg.save(output_path)
 
-except Exception as e:
-    print(f"[get_thumb Error] {e}")
-    traceback.print_exc()
-    return None
+        try:
+            os.remove(f"cache/thumb{videoid}.png")
+        except:
+            pass
 
-async def gen_thumb(videoid: str): return await get_thumb(videoid)
+        return output_path
 
+    except Exception as e:
+        print(f"[get_thumb Error] {e}")
+        traceback.print_exc()
+        return None
