@@ -6,12 +6,14 @@ import aiofiles
 import traceback
 
 from PIL import Image, ImageDraw, ImageEnhance, ImageFilter, ImageFont, ImageOps
-from youtubesearchpython.__future__ import VideosSearch   # ✅ FIXED
+from youtubesearchpython.__future__ import VideosSearch
+
 
 def changeImageSize(maxWidth, maxHeight, image):
     ratio = min(maxWidth / image.size[0], maxHeight / image.size[1])
     newSize = (int(image.size[0] * ratio), int(image.size[1] * ratio))
     return image.resize(newSize, Image.ANTIALIAS)
+
 
 def truncate_ellipsis(text, max_chars=20):
     if len(text) <= max_chars:
@@ -21,15 +23,13 @@ def truncate_ellipsis(text, max_chars=20):
         truncated = truncated[:truncated.rfind(' ')]
     return truncated + "..." if len(truncated) > 0 else text[:max_chars-3] + "..."
 
+
 def ensure_text_fits(draw, text, font, max_width):
-    """Ensure text doesn't exceed max width by truncating with ellipsis"""
     text_width = draw.textlength(text, font=font)
     if text_width <= max_width:
         return text
-    
-    # Binary search for optimal truncation
-    low = 1
-    high = len(text)
+
+    low, high = 1, len(text)
     best = ""
     while low <= high:
         mid = (low + high) // 2
@@ -42,6 +42,7 @@ def ensure_text_fits(draw, text, font, max_width):
             high = mid - 1
     return best if best else "..."
 
+
 def fit_text(draw, text, max_width, font_path, start_size, min_size):
     size = start_size
     while size >= min_size:
@@ -50,6 +51,7 @@ def fit_text(draw, text, max_width, font_path, start_size, min_size):
             return font
         size -= 1
     return ImageFont.truetype(font_path, min_size)
+
 
 async def get_thumb(videoid: str):
     url = f"https://www.youtube.com/watch?v={videoid}"
@@ -62,38 +64,37 @@ async def get_thumb(videoid: str):
         thumbnail = result["thumbnails"][0]["url"].split("?")[0]
         channel = result.get("channel", {}).get("name", "Unknown Channel")
 
-        # Download thumbnail
+        # download thumb
         async with aiohttp.ClientSession() as session:
             async with session.get(thumbnail) as resp:
                 if resp.status == 200:
-                    async with aiofiles.open(f"cache/thumb{videoid}.png", mode="wb") as f:
+                    async with aiofiles.open(f"cache/thumb{videoid}.png", "wb") as f:
                         await f.write(await resp.read())
 
         base_img = Image.open(f"cache/thumb{videoid}.png").convert("RGBA")
         bg_img = changeImageSize(1280, 720, base_img).convert("RGBA")
-        blurred_bg = bg_img.filter(ImageFilter.GaussianBlur(30))
+        blurred_bg = bg_img.filter(ImageFilter.GaussianBlur(25))
 
-        # Card overlay
-        card_width, card_height = 960, 320
-        card = Image.new("RGBA", (card_width, card_height), (40, 40, 60, 200))
+        # card box
+        card_width, card_height = 1050, 400
+        card = Image.new("RGBA", (card_width, card_height), (255, 255, 255, 235))
         mask = Image.new("L", (card_width, card_height), 0)
         draw_mask = ImageDraw.Draw(mask)
         draw_mask.rounded_rectangle([0, 0, card_width, card_height], radius=40, fill=255)
         card_pos = ((1280 - card_width) // 2, (720 - card_height) // 2)
         blurred_bg.paste(card, card_pos, mask)
-        
+
         final_bg = blurred_bg.copy()
-        final_bg.paste(card, card_pos, mask)
         draw = ImageDraw.Draw(final_bg)
 
-        # Font paths
+        # fonts
         font_path_regular = "AviaxMusic/assets/font2.ttf"
         font_path_bold = "AviaxMusic/assets/font3.ttf"
 
-        # Medium album art 
-        thumb_size = 250
+        # album art
+        thumb_size = 350
         corner_radius = 40
-        mask = Image.new('L', (thumb_size, thumb_size), 0)
+        mask = Image.new("L", (thumb_size, thumb_size), 0)
         draw_mask = ImageDraw.Draw(mask)
         draw_mask.rounded_rectangle((0, 0, thumb_size, thumb_size), radius=corner_radius, fill=255)
 
@@ -104,36 +105,45 @@ async def get_thumb(videoid: str):
         thumb_y = card_pos[1] + (card_height - thumb_size) // 2
         final_bg.paste(thumb_square, (thumb_x, thumb_y), thumb_square)
 
-        # Text layout with overflow protection
+        # text layout
         text_x = thumb_x + thumb_size + 40
-        text_y = thumb_y + 20
+        text_y = thumb_y + 40
         max_text_width = card_width - (text_x - card_pos[0]) - 40
 
-        # Fonts
         font_small = ImageFont.truetype(font_path_regular, 28)
-        font_medium = ImageFont.truetype(font_path_regular, 36)
+        font_medium = ImageFont.truetype(font_path_regular, 34)
         font_title = fit_text(draw, title, max_text_width, font_path_bold, 48, 32)
 
-        # Channel name (with overflow protection)
-        channel_text = ensure_text_fits(draw, channel, font_small, max_text_width)
-        draw.text((text_x, text_y), "NOW PLAYING", fill=(180, 180, 180), font=font_small)
-        
-        # Title (with dynamic sizing and overflow protection)
+        # title
         title_text = ensure_text_fits(draw, title, font_title, max_text_width)
-        draw.text(
-            (text_x, text_y + 40),
-            title_text,
-            fill=(255, 255, 255),
-            font=font_title
-        )
-        
-        # Artist and duration
+        draw.text((text_x, text_y), title_text, fill=(0, 0, 0), font=font_title)
+
+        # channel
         artist_text = ensure_text_fits(draw, channel, font_medium, max_text_width)
-        draw.text((text_x, text_y + 100), artist_text, fill=(200, 200, 200), font=font_medium)
-        
-        duration_text = f"00:00 / {duration}"
-        duration_text = ensure_text_fits(draw, duration_text, font_small, max_text_width)
-        draw.text((text_x, text_y + 150), duration_text, fill=(170, 170, 170), font=font_small)
+        draw.text((text_x, text_y + 60), artist_text, fill=(70, 70, 70), font=font_medium)
+
+        # progress bar
+        bar_y = text_y + 130
+        bar_x1, bar_x2 = text_x, text_x + max_text_width
+        draw.line((bar_x1, bar_y, bar_x2, bar_y), fill=(180, 180, 180), width=6)
+
+        # time
+        draw.text((bar_x1, bar_y + 15), "00:00", fill=(100, 100, 100), font=font_small)
+        draw.text((bar_x2 - 60, bar_y + 15), duration, fill=(100, 100, 100), font=font_small)
+
+        # play button
+        play_radius = 35
+        center_x = text_x + max_text_width // 2
+        center_y = bar_y + 100
+        draw.ellipse(
+            (center_x - play_radius, center_y - play_radius,
+             center_x + play_radius, center_y + play_radius),
+            fill=(0, 0, 0)
+        )
+        draw.polygon(
+            [(center_x - 10, center_y - 15), (center_x - 10, center_y + 15), (center_x + 15, center_y)],
+            fill=(255, 255, 255)
+        )
 
         output_path = f"cache/{videoid}_styled.png"
         final_bg.save(output_path)
@@ -150,6 +160,6 @@ async def get_thumb(videoid: str):
         traceback.print_exc()
         return None
 
-# ✅ नया function ताकि gen_thumb missing error ना दे
+
 async def gen_thumb(videoid: str):
     return await get_thumb(videoid)
