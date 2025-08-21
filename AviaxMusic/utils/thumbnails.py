@@ -1,136 +1,133 @@
 import os
 import re
-import aiohttp
 import aiofiles
-import traceback
+import aiohttp
 from PIL import Image, ImageDraw, ImageEnhance, ImageFilter, ImageFont
-from youtubesearchpython.__future__ import VideosSearch  # ✅ Fixed import
+from youtubesearchpython.__future__ import VideosSearch
+from config import YOUTUBE_IMG_URL
 
-# Resize image maintaining aspect ratio
-def changeImageSize(maxWidth, maxHeight, image):
-    ratio = min(maxWidth / image.size[0], maxHeight / image.size[1])
-    newSize = (int(image.size[0] * ratio), int(image.size[1] * ratio))
-    return image.resize(newSize, Image.ANTIALIAS)
+# Constants
+CACHE_DIR = "cache"
+os.makedirs(CACHE_DIR, exist_ok=True)
 
-# Ensure text fits within max width
-def ensure_text_fits(draw, text, font, max_width):
-    text_width = draw.textlength(text, font=font)
-    if text_width <= max_width:
+PANEL_W, PANEL_H = 763, 545
+PANEL_X = (1280 - PANEL_W) // 2
+PANEL_Y = 88
+TRANSPARENCY = 170
+INNER_OFFSET = 36
+
+THUMB_W, THUMB_H = 542, 273
+THUMB_X = PANEL_X + (PANEL_W - THUMB_W) // 2
+THUMB_Y = PANEL_Y + INNER_OFFSET
+
+TITLE_X = 377
+META_X = 377
+TITLE_Y = THUMB_Y + THUMB_H + 10
+META_Y = TITLE_Y + 45
+
+BAR_X, BAR_Y = 388, META_Y + 45
+BAR_RED_LEN = 280
+BAR_TOTAL_LEN = 480
+
+ICONS_W, ICONS_H = 415, 45
+ICONS_X = PANEL_X + (PANEL_W - ICONS_W) // 2
+ICONS_Y = BAR_Y + 48
+
+MAX_TITLE_WIDTH = 580
+
+def trim_to_width(text: str, font: ImageFont.FreeTypeFont, max_w: int) -> str:
+    ellipsis = "…"
+    if font.getlength(text) <= max_w:
         return text
-    while text and draw.textlength(text + "...", font=font) > max_width:
-        text = text[:-1]
-    return text + "..."
+    for i in range(len(text) - 1, 0, -1):
+        if font.getlength(text[:i] + ellipsis) <= max_w:
+            return text[:i] + ellipsis
+    return ellipsis
 
-# Fit text with font size range
-def fit_text(draw, text, max_width, font_path, start_size, min_size):
-    size = start_size
-    while size >= min_size:
-        font = ImageFont.truetype(font_path, size)
-        if draw.textlength(text, font=font) <= max_width:
-            return font
-        size -= 1
-    return ImageFont.truetype(font_path, min_size)
+async def gen_thumb(videoid: str):
+    cache_path = os.path.join(CACHE_DIR, f"{videoid}_v4.png")
+    if os.path.exists(cache_path):
+        return cache_path
 
-async def get_thumb(videoid: str):
-    url = f"https://www.youtube.com/watch?v={videoid}"
+    # YouTube video data fetch
+    results = VideosSearch(f"https://www.youtube.com/watch?v={videoid}", limit=1)
     try:
-        results = VideosSearch(url, limit=1)
-        result = (await results.next())["result"][0]
+        results_data = await results.next()
+        result_items = results_data.get("result", [])
+        if not result_items:
+            raise ValueError("No results found.")
+        data = result_items[0]
+        title = re.sub(r"\W+", " ", data.get("title", "Unsupported Title")).title()
+        thumbnail = data.get("thumbnails", [{}])[0].get("url", YOUTUBE_IMG_URL)
+        duration = data.get("duration")
+        views = data.get("viewCount", {}).get("short", "Unknown Views")
+    except Exception:
+        title, thumbnail, duration, views = "Unsupported Title", YOUTUBE_IMG_URL, None, "Unknown Views"
 
-        title = result.get("title", "Unknown Title")
-        duration = result.get("duration", "00:00")
-        thumbnail = result["thumbnails"][0]["url"].split("?")[0]
-        channel = result.get("channel", {}).get("name", "Unknown Channel")
-        views = result.get("viewCount", {}).get("short", "0 views")
+    is_live = not duration or str(duration).strip().lower() in {"", "live", "live now"}
+    duration_text = "Live" if is_live else duration or "Unknown Mins"
 
-        # download thumbnail
+    # Download thumbnail
+    thumb_path = os.path.join(CACHE_DIR, f"thumb{videoid}.png")
+    try:
         async with aiohttp.ClientSession() as session:
             async with session.get(thumbnail) as resp:
                 if resp.status == 200:
-                    async with aiofiles.open(f"cache/thumb{videoid}.png", "wb") as f:
+                    async with aiofiles.open(thumb_path, "wb") as f:
                         await f.write(await resp.read())
+    except Exception:
+        return YOUTUBE_IMG_URL
 
-        base_img = Image.open(f"cache/thumb{videoid}.png").convert("RGBA")
-        bg_img = changeImageSize(1280, 720, base_img).convert("RGBA")
-        blurred_bg = bg_img.filter(ImageFilter.GaussianBlur(25))
+    # Create base image
+    base = Image.open(thumb_path).resize((1280, 720)).convert("RGBA")
+    bg = ImageEnhance.Brightness(base.filter(ImageFilter.BoxBlur(10))).enhance(0.6)
 
-        # card box (rounded rectangle)
-        card_width, card_height = 1050, 400
-        card = Image.new("RGBA", (card_width, card_height), (255, 255, 255, 235))
-        mask = Image.new("L", (card_width, card_height), 0)
-        draw_mask = ImageDraw.Draw(mask)
-        draw_mask.rounded_rectangle([0, 0, card_width, card_height], radius=50, fill=255)
-        card_pos = ((1280 - card_width) // 2, (720 - card_height) // 2)
-        blurred_bg.paste(card, card_pos, mask)
+    # Frosted glass panel
+    panel_area = bg.crop((PANEL_X, PANEL_Y, PANEL_X + PANEL_W, PANEL_Y + PANEL_H))
+    overlay = Image.new("RGBA", (PANEL_W, PANEL_H), (255, 255, 255, TRANSPARENCY))
+    frosted = Image.alpha_composite(panel_area, overlay)
+    mask = Image.new("L", (PANEL_W, PANEL_H), 0)
+    ImageDraw.Draw(mask).rounded_rectangle((0, 0, PANEL_W, PANEL_H), 50, fill=255)
+    bg.paste(frosted, (PANEL_X, PANEL_Y), mask)
 
-        final_bg = blurred_bg.copy()
-        draw = ImageDraw.Draw(final_bg)
+    # Draw details
+    draw = ImageDraw.Draw(bg)
+    try:
+        title_font = ImageFont.truetype("AviaxMusic/assets/font2.ttf", 32)
+        regular_font = ImageFont.truetype("AviaxMusic/assets/font.ttf", 18)
+    except OSError:
+        title_font = regular_font = ImageFont.load_default()
 
-        # fonts
-        font_path_regular = "AviaxMusic/assets/font2.ttf"
-        font_path_bold = "AviaxMusic/assets/font3.ttf"
+    thumb = base.resize((THUMB_W, THUMB_H))
+    tmask = Image.new("L", thumb.size, 0)
+    ImageDraw.Draw(tmask).rounded_rectangle((0, 0, THUMB_W, THUMB_H), 20, fill=255)
+    bg.paste(thumb, (THUMB_X, THUMB_Y), tmask)
 
-        # album art with rounded corners
-        thumb_size = 350
-        corner_radius = 40
-        mask_thumb = Image.new("L", (thumb_size, thumb_size), 0)
-        draw_thumb_mask = ImageDraw.Draw(mask_thumb)
-        draw_thumb_mask.rounded_rectangle((0, 0, thumb_size, thumb_size), radius=corner_radius, fill=255)
+    draw.text((TITLE_X, TITLE_Y), trim_to_width(title, title_font, MAX_TITLE_WIDTH), fill="black", font=title_font)
+    draw.text((META_X, META_Y), f"YouTube | {views}", fill="black", font=regular_font)
 
-        thumb_square = base_img.resize((thumb_size, thumb_size))
-        thumb_square.putalpha(mask_thumb)
+    # Progress bar
+    draw.line([(BAR_X, BAR_Y), (BAR_X + BAR_RED_LEN, BAR_Y)], fill="red", width=6)
+    draw.line([(BAR_X + BAR_RED_LEN, BAR_Y), (BAR_X + BAR_TOTAL_LEN, BAR_Y)], fill="gray", width=5)
+    draw.ellipse([(BAR_X + BAR_RED_LEN - 7, BAR_Y - 7), (BAR_X + BAR_RED_LEN + 7, BAR_Y + 7)], fill="red")
 
-        thumb_x = card_pos[0] + 40
-        thumb_y = card_pos[1] + (card_height - thumb_size) // 2
-        final_bg.paste(thumb_square, (thumb_x, thumb_y), thumb_square)
+    draw.text((BAR_X, BAR_Y + 15), "00:00", fill="black", font=regular_font)
+    end_text = "Live" if is_live else duration_text
+    draw.text((BAR_X + BAR_TOTAL_LEN - (90 if is_live else 60), BAR_Y + 15), end_text, fill="red" if is_live else "black", font=regular_font)
 
-        # text layout
-        text_x = thumb_x + thumb_size + 40
-        text_y = thumb_y + 30
-        max_text_width = card_width - (text_x - card_pos[0]) - 40
+    # Icons
+    icons_path = "AviaxMusic/assets/play_icons.png"
+    if os.path.isfile(icons_path):
+        ic = Image.open(icons_path).resize((ICONS_W, ICONS_H)).convert("RGBA")
+        r, g, b, a = ic.split()
+        black_ic = Image.merge("RGBA", (r.point(lambda *_: 0), g.point(lambda *_: 0), b.point(lambda *_: 0), a))
+        bg.paste(black_ic, (ICONS_X, ICONS_Y), black_ic)
 
-        font_small = ImageFont.truetype(font_path_regular, 30)
-        font_medium = ImageFont.truetype(font_path_regular, 36)
-        font_title = fit_text(draw, title, max_text_width, font_path_bold, 48, 32)
+    # Cleanup and save
+    try:
+        os.remove(thumb_path)
+    except OSError:
+        pass
 
-        # title
-        title_text = ensure_text_fits(draw, title, font_title, max_text_width)
-        draw.text((text_x, text_y), title_text, fill=(0, 0, 0), font=font_title)
-
-        # channel + views
-        info_text = f"YouTube | {views}"
-        draw.text((text_x, text_y + 70), info_text, fill=(80, 80, 80), font=font_medium)
-
-        # progress bar
-        bar_y = text_y + 160
-        bar_x1, bar_x2 = text_x, text_x + max_text_width
-        draw.line((bar_x1, bar_y, bar_x2, bar_y), fill=(200, 200, 200), width=8)
-
-        # time indicators
-        draw.text((bar_x1, bar_y + 15), "00:00", fill=(100, 100, 100), font=font_small)
-        draw.text((bar_x2 - 80, bar_y + 15), duration, fill=(100, 100, 100), font=font_small)
-
-        # controls (shuffle, prev, play, next, repeat)
-        icon_y = bar_y + 90
-        spacing = 120
-        center_x = text_x + max_text_width // 2
-
-        # Draw play button circle
-        play_radius = 35
-        draw.ellipse((center_x - play_radius, icon_y - play_radius, center_x + play_radius, icon_y + play_radius), fill=(0, 0, 0))
-        draw.polygon([(center_x - 10, icon_y - 15), (center_x - 10, icon_y + 15), (center_x + 15, icon_y)], fill=(255, 255, 255))
-
-        output_path = f"cache/{videoid}_styled.png"
-        final_bg.save(output_path)
-
-        try:
-            os.remove(f"cache/thumb{videoid}.png")
-        except:
-            pass
-
-        return output_path
-
-    except Exception as e:
-        print(f"[get_thumb Error] {e}")
-        traceback.print_exc()
-        return None
+    bg.save(cache_path)
+    return cache_path
