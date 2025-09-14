@@ -26,8 +26,9 @@ HEROKU_APP_NAME = os.getenv("HEROKU_APP_NAME")
 HEROKU_API_KEY = os.getenv("HEROKU_API_KEY")
 
 # ✅ External API for music
-API_URL = os.getenv("API_URL", "https://api.thequickearn.xyz")
-API_KEY = os.getenv("API_KEY")  # Set this in Heroku Config Vars
+API_URL = getenv("API_URL", 'https://api.thequickearn.xyz') #youtube song url
+VIDEO_API_URL = getenv("VIDEO_API_URL", 'https://api.video.thequickearn.xyz')
+API_KEY = getenv("API_KEY", None) # youtube song api key, generate free key or buy paid plan from panel.thequickearn.xyz
 
 # ✅ Repo details
 UPSTREAM_REPO = os.getenv("UPSTREAM_REPO", "https://github.com/the-stonex/Nayara")
@@ -98,3 +99,4 @@ if SUPPORT_CHANNEL and not re.match(r"(?:http|https)://", SUPPORT_CHANNEL):
 
 if SUPPORT_CHAT and not re.match(r"(?:http|https)://", SUPPORT_CHAT):
     raise SystemExit("[ERROR] - SUPPORT_CHAT URL must start with https://")
+
