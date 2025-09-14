@@ -15,7 +15,7 @@ BOT_TOKEN = getenv("BOT_TOKEN")
 MONGO_DB_URI = getenv("MONGO_DB_URI", None)
 
 # Duration limits
-DURATION_LIMIT_MIN = int(getenv("DURATION_LIMIT", 60))
+DURATION_LIMIT_MIN = int(getenv("DURATION_LIMIT", 9999999))
 
 # Log group
 LOG_GROUP_ID = int(getenv("LOG_GROUP_ID", None))
@@ -34,17 +34,17 @@ API_KEY = getenv("API_KEY", None)  # Free/Paid API key
 
 # GitHub repository
 UPSTREAM_REPO = getenv(
-    "UPSTREAM_REPO", "https://github.com/CyberPixelPro/AviaxMusic"
+    "UPSTREAM_REPO", "https://github.com/the-stonex/Nayara"
 )
 UPSTREAM_BRANCH = getenv("UPSTREAM_BRANCH", "master")
 GIT_TOKEN = getenv("GIT_TOKEN", None)  # Only if repo is private
 
 # Support links
-SUPPORT_CHANNEL = getenv("SUPPORT_CHANNEL", "https://t.me/NexGenBots")
-SUPPORT_GROUP = getenv("SUPPORT_GROUP", "https://t.me/NexGenSpam")
+SUPPORT_CHANNEL = getenv("SUPPORT_CHANNEL", "https://t.me/+YTsbDmCAJxVkMTc1")
+SUPPORT_GROUP = getenv("SUPPORT_GROUP", "https://t.me/Shayari_kii_dairy")
 
 # Assistant settings
-AUTO_LEAVING_ASSISTANT = bool(getenv("AUTO_LEAVING_ASSISTANT", False))
+AUTO_LEAVING_ASSISTANT = bool(getenv("AUTO_LEAVING_ASSISTANT", True))
 
 # Privacy link
 PRIVACY_LINK = getenv(
@@ -115,3 +115,4 @@ if SUPPORT_GROUP:
         raise SystemExit(
             "[ERROR] - Your SUPPORT_GROUP url is wrong. Please ensure it starts with https://"
         )
+
