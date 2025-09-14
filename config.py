@@ -43,6 +43,9 @@ GIT_TOKEN = getenv("GIT_TOKEN", None)  # Only if repo is private
 SUPPORT_CHANNEL = getenv("SUPPORT_CHANNEL", "https://t.me/+YTsbDmCAJxVkMTc1")
 SUPPORT_GROUP = getenv("SUPPORT_GROUP", "https://t.me/Shayari_kii_dairy")
 
+# ✅ Fix: SUPPORT_CHAT added (alias of SUPPORT_GROUP)
+SUPPORT_CHAT = SUPPORT_GROUP
+
 # Assistant settings
 AUTO_LEAVING_ASSISTANT = bool(getenv("AUTO_LEAVING_ASSISTANT", True))
 
@@ -115,4 +118,3 @@ if SUPPORT_GROUP:
         raise SystemExit(
             "[ERROR] - Your SUPPORT_GROUP url is wrong. Please ensure it starts with https://"
         )
-
