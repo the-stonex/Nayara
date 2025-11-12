@@ -7,7 +7,7 @@ import requests
 import yt_dlp
 from pyrogram.enums import MessageEntityType
 from pyrogram.types import Message
-from youtubesearchpython.__future__ import VideosSearch
+from py_yt import VideosSearch
 from AviaxMusic.utils.database import is_on_off
 from AviaxMusic.utils.formatters import time_to_seconds
 import os
@@ -557,7 +557,7 @@ class YouTubeAPI:
             except Exception as e:
                 print(f"Video API failed: {e}")
             
-            # Fallback to cookies
+            # Fallback to cookie
             cookie_file = cookie_txt_file()
             if not cookie_file:
                 print("No cookies found. Cannot download video.")
