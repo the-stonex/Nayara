@@ -28,9 +28,9 @@ HEROKU_APP_NAME = getenv("HEROKU_APP_NAME")
 HEROKU_API_KEY = getenv("HEROKU_API_KEY")
 
 # External APIs
-API_URL = getenv("API_URL", "https://api.thequickearn.xyz")  # YouTube song API
-VIDEO_API_URL = getenv("VIDEO_API_URL", "https://api.video.thequickearn.xyz")
-API_KEY = getenv("API_KEY", None)  # Free/Paid API key
+API_URL = getenv("API_URL", 'https://pytdbotapi.thequickearn.xyz') #youtube song url
+VIDEO_API_URL = getenv("VIDEO_API_URL", 'https://api.video.thequickearn.xyz')
+API_KEY = getenv("API_KEY", None) # youtube song api key, generate free key or buy paid plan from panel.thequickearn.xyz
 
 # GitHub repository
 UPSTREAM_REPO = getenv(
@@ -118,3 +118,4 @@ if SUPPORT_GROUP:
         raise SystemExit(
             "[ERROR] - Your SUPPORT_GROUP url is wrong. Please ensure it starts with https://"
         )
+
